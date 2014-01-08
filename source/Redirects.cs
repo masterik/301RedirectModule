@@ -2,6 +2,7 @@
 using Sitecore;
 using Sitecore.Data;
 using System;
+using Sitecore.Data.Fields;
 using Sitecore.Data.Items;
 using System.Text.RegularExpressions;
 using System.Linq;
@@ -39,15 +40,29 @@ namespace SharedSource.RedirectModule
 				{
 					// Loop through the exact match entries to look for a match.
 					foreach (Item possibleRedirect in GetRedirects(db, "Redirect Url", Sitecore.Configuration.Settings.GetSetting("SharedSource.RedirectModule.QueryType.ExactMatch")))
-					{						
+					{
 						if (requestedUrl.Equals(possibleRedirect["Requested Url"], StringComparison.OrdinalIgnoreCase) ||
-							 requestedPath.Equals(possibleRedirect["Requested Url"], StringComparison.OrdinalIgnoreCase))
+							requestedPath.Equals(possibleRedirect["Requested Url"], StringComparison.OrdinalIgnoreCase))
 						{
-							var redirectToItem = db.GetItem(ID.Parse(possibleRedirect.Fields["redirect to"]));
-							if (redirectToItem != null)
-							{
-								SendResponse(redirectToItem, HttpContext.Current.Request.Url.Query, args);
-							}
+                            LinkField field = possibleRedirect.Fields["redirect to"];
+						    if (field != null)
+						    {
+                                // Skip this item for link types other than internal, media or external
+                                switch (field.LinkType.ToLower())
+                                {
+                                    case "internal":
+                                    case "media":
+                                        if (field.TargetItem != null)
+                                        {
+                                            SendResponse(field.TargetItem, HttpContext.Current.Request.Url.Query, args);
+                                        }
+                                        break;
+
+                                    case "external":
+                                        SendResponse(field.Url, HttpContext.Current.Request.Url.Query, args);
+                                        break;
+                                }
+						    }
 						}						
 					}
 				}
@@ -75,18 +90,24 @@ namespace SharedSource.RedirectModule
 						// Query portion gets in the way of getting the sitecore item.
 						var pathAndQuery = redirectPath.Split('?');
 						var path = pathAndQuery[0];
-						if (LinkManager.Provider != null &&
+                        var query = pathAndQuery.Length > 1 ? "?" + pathAndQuery[1] : "";
+						
+                        if (LinkManager.Provider != null &&
 							LinkManager.Provider.GetDefaultUrlOptions() != null &&
 							LinkManager.Provider.GetDefaultUrlOptions().EncodeNames)
 						{
 							path = MainUtil.DecodeName(path);
 						}
-						var redirectToItem = db.GetItem(path);
+
+                        var redirectToItem = db.GetItem(path);
 						if (redirectToItem != null)
 						{
-							var query = pathAndQuery.Length > 1 ? "?" + pathAndQuery[1] : "";
 							SendResponse(redirectToItem, query, args);
 						}
+						else
+						{
+                            SendResponse(path, query, args);
+                        }
 					}
 				}
 			}
@@ -143,7 +164,14 @@ namespace SharedSource.RedirectModule
 		/// </summary>
 		private static void SendResponse(Item redirectToItem, string queryString, HttpRequestArgs args)
 		{
-			var redirectToUrl = GetRedirectToUrl(redirectToItem);
+            SendResponse(GetRedirectToUrl(redirectToItem), queryString, args);
+		}
+
+        /// <summary>
+        ///  Once a match is found and we have a target URL, we can send the 301 response.
+        /// </summary>
+        private static void SendResponse(string redirectToUrl, string queryString, HttpRequestArgs args)
+		{
 			args.Context.Response.Status = "301 Moved Permanently";
 			args.Context.Response.StatusCode = 301;
 			args.Context.Response.AddHeader("Location", redirectToUrl + queryString);
