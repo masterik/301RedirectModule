@@ -1,11 +1,17 @@
 301RedirectModule
 =================
 
-An improved version of the Sitecore 301 redirect module. Original version was created by Chris Castle, available at [http://trac.sitecore.net/301RedirectModule](http://trac.sitecore.net/301RedirectModule)
+An improved version of the Sitecore 301 redirect module. Original version was created by Chris Castle, available at [http://marketplace.sitecore.net/en/Modules/301_Redirect_module](http://marketplace.sitecore.net/en/Modules/301_Redirect_module)
 
-Improvements by Chris Adams, [http://www.cadams.com.au/](http://www.cadams.com.au/)
+Improvements by:
+* Chris Adams, [http://github.com/thecadams](http://github.com/thecadams)
+* Malik Amurlayev, [http://github.com/masterik](http://github.com/masterik)
 
 ## Changelog ##
+
+**Version 1.1.3:**
+
+* Redirect to any URL (not only item in Sitecore)
 
 **Version 1.1.2:**
 
